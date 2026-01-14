@@ -1,0 +1,17 @@
+2026-01-14 10:00:00 UTC:127.0.0.1(12345):app_user@mydb:[1001]: LOG: AUDIT: SESSION,1,1,READ,SELECT,TABLE,public.products,SELECT id, name FROM products WHERE category = 'books';
+2026-01-14 10:00:05 UTC:127.0.0.1(12345):app_user@mydb:[1001]: LOG: AUDIT: SESSION,2,1,WRITE,INSERT,TABLE,public.orders,INSERT INTO orders (user_id, product_id) VALUES (1, 42);
+2026-01-14 10:00:10 UTC:127.0.0.1(12345):app_user@mydb:[1001]: LOG: AUDIT: SESSION,3,1,WRITE,UPDATE,TABLE,public.users,UPDATE users SET last_login = NOW() WHERE id = 1;
+2026-01-14 10:00:15 UTC:192.168.1.50(54321):web_user@mydb:[1002]: LOG: AUDIT: SESSION,4,1,READ,SELECT,TABLE,public.users,SELECT * FROM users WHERE username = 'admin' OR 1=1;
+2026-01-14 10:00:20 UTC:192.168.1.50(54321):web_user@mydb:[1002]: LOG: AUDIT: SESSION,5,1,READ,SELECT,TABLE,public.users,SELECT * FROM users WHERE id = 1; DROP TABLE users;--
+2026-01-14 10:00:25 UTC:192.168.1.50(54321):web_user@mydb:[1002]: LOG: AUDIT: SESSION,6,1,READ,SELECT,TABLE,public.users,SELECT name FROM users UNION SELECT password FROM secrets;
+2026-01-14 10:00:30 UTC:::postgres@mydb:[1000]: LOG: checkpoint starting: time
+2026-01-14 10:00:31 UTC:::postgres@mydb:[1000]: LOG: connection received: host=127.0.0.1
+2026-01-14 10:00:35 UTC:10.0.0.100(33333):suspicious@mydb:[1003]: LOG: AUDIT: SESSION,7,1,READ,SELECT,TABLE,public.users,SELECT * FROM users;
+2026-01-14 10:00:40 UTC:10.0.0.100(33333):suspicious@mydb:[1003]: LOG: AUDIT: SESSION,8,1,READ,SELECT,TABLE,public.credentials,SELECT password_hash, api_key FROM credentials;
+2026-01-14 10:00:45 UTC:10.0.0.100(33333):suspicious@mydb:[1003]: LOG: AUDIT: SESSION,9,1,READ,SELECT,TABLE,public.orders,SELECT * FROM orders LIMIT 50000;
+2026-01-14 10:00:50 UTC:127.0.0.1(12345):app_user@mydb:[1001]: LOG: AUDIT: SESSION,10,1,READ,SELECT,TABLE,public.categories,SELECT id, name FROM categories ORDER BY name;
+2026-01-14 10:00:55 UTC:127.0.0.1(12345):app_user@mydb:[1001]: LOG: AUDIT: SESSION,11,1,READ,SELECT,TABLE,public.products,SELECT COUNT(*) FROM products WHERE active = true;
+2026-01-14 10:01:00 UTC:192.168.1.50(54321):web_user@mydb:[1002]: LOG: AUDIT: SESSION,12,1,READ,SELECT,TABLE,public.sessions,SELECT * FROM sessions WHERE token = 'abc' UNION ALL SELECT id, secret FROM api_keys;
+2026-01-14 10:01:05 UTC:10.0.0.100(33333):suspicious@mydb:[1003]: LOG: AUDIT: SESSION,13,1,READ,SELECT,TABLE,public.audit_log,SELECT user_id, email, ssn FROM users WHERE 1=1;
+2026-01-14 10:01:10 UTC:::postgres@mydb:[1000]: LOG: autovacuum: running cleanup on database "mydb"
+2026-01-14 10:01:15 UTC:127.0.0.1(12345):app_user@mydb:[1001]: LOG: AUDIT: SESSION,14,1,WRITE,DELETE,TABLE,public.cart_items,DELETE FROM cart_items WHERE session_id = 'expired123';
