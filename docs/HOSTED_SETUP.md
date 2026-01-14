@@ -4,34 +4,17 @@ This guide explains how to configure the Supabase Query Alert system to work wit
 
 ## Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Hosted Supabase                          │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  PostgreSQL Database (with pgaudit enabled)         │   │
-│  │  → Logs queries to postgres_logs via Logflare       │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                          │                                  │
-│                          ▼                                  │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  Supabase Analytics (BigQuery-style SQL)            │   │
-│  │  → Queryable via Management API                     │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-                           │
-                           │ Management API
-                           │ GET /v1/projects/{ref}/analytics/endpoints/logs.all
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                 Supabase Query Alert                        │
-│  ┌───────────────┐    ┌──────────────┐    ┌─────────────┐  │
-│  │SupabaseLog    │───▶│AnalyzerReg  │───▶│AlertOutput  │  │
-│  │Input          │    │  • SQLInj    │    │  • Console  │  │
-│  │               │    │  • DataExfil │    │  • Webhook  │  │
-│  │               │    │  • VolumeAn  │    │  • Slack    │  │
-│  └───────────────┘    └──────────────┘    └─────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-```
+The system operates as a pull-based log analysis pipeline that integrates with Supabase's logging infrastructure.
+
+**How Supabase captures query logs:** When you enable the pgaudit extension on your Supabase PostgreSQL database, every SQL statement executed against the database generates an audit log entry. These entries flow through Supabase's internal logging pipeline (powered by Logflare) and are stored in a queryable analytics backend that uses BigQuery-style SQL syntax. The logs are retained based on your Supabase plan tier.
+
+**How the application fetches logs:** The `SupabaseLogClient` component makes authenticated HTTP requests to Supabase's Management API at the `/v1/projects/{ref}/analytics/endpoints/logs.all` endpoint. This endpoint accepts a SQL query parameter that allows filtering the `postgres_logs` table for specific time ranges, user roles, command types, or custom patterns. The API returns JSON arrays containing log entries with timestamps, event messages, and nested metadata.
+
+**How logs are parsed and analyzed:** The `PgAuditLogParser` extracts structured data from pgaudit's CSV-formatted event messages, pulling out the audit type, command class, object references, and the actual SQL statement. The `SupabaseLogInput` adapter wraps this parsing logic and implements the `QueryInput` protocol, allowing parsed queries to flow through the standard analysis pipeline. Each query passes through registered analyzers (SQL injection detection, data exfiltration detection, volume anomaly detection) which examine the SQL text and metadata for suspicious patterns.
+
+**How alerts are generated:** When any analyzer returns findings for a query, those findings are aggregated into an `Alert` object that preserves the original query context, user attribution from the logs, and the specific security concerns identified. Alerts can be routed to multiple output channels (console, webhooks, logging systems) based on your configuration.
+
+**Production deployment model:** In production, a scheduled job (cron, cloud scheduler, or serverless function trigger) periodically invokes the log fetching and analysis pipeline. Each invocation queries a rolling time window (typically the last 5 minutes with some overlap) to ensure continuous coverage without gaps. The stateless design means each invocation is independent—no persistent state is required between runs.
 
 ## Prerequisites
 
