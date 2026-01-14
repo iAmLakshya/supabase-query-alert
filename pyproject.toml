@@ -1,0 +1,40 @@
+[project]
+name = "supabase-query-alert"
+version = "0.1.0"
+description = "Lightweight Python service for Supabase query analysis and suspicious activity alerting"
+authors = [{name = "Lakshya"}]
+requires-python = ">=3.11"
+dynamic = ["dependencies"]
+
+[tool.poetry]
+packages = [{include = "supabase_query_alert", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+pytest-asyncio = "^0.24"
+ruff = "^0.8"
+mypy = "^1.14"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
