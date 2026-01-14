@@ -12,12 +12,15 @@ packages = [{include = "supabase_query_alert", from = "src"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 httpx = "^0.28.1"
+aiobotocore = "^2.15"
+types-aiobotocore = {version = "^2.15", extras = ["sqs"]}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
 pytest-asyncio = "^0.24"
 ruff = "^0.8"
 mypy = "^1.14"
+aiomoto = "^0.3"
 
 [build-system]
 requires = ["poetry-core"]
