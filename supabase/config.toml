@@ -1,7 +1,3 @@
-[project]
-id = "supabase-query-alert"
-name = "Supabase Query Alert"
-
 [api]
 enabled = true
 port = 54321
