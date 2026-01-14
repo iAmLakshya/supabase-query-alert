@@ -1,6 +1,5 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-import httpx
 
 from supabase_query_alert.api import (
     SupabaseManagementClient,
@@ -32,15 +31,14 @@ class TestAuthHeader:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = []
-        mock_response.headers = {}
 
-        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-            mock_get.return_value = mock_response
+        with patch("httpx.AsyncClient.request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             async with SupabaseManagementClient(access_token="my-secret-token") as client:
                 await client.list_projects()
 
-            mock_get.assert_called_once()
-            call_kwargs = mock_get.call_args.kwargs
+            mock_request.assert_called_once()
+            call_kwargs = mock_request.call_args.kwargs
             assert "headers" in call_kwargs
             assert call_kwargs["headers"]["Authorization"] == "Bearer my-secret-token"
 
@@ -60,10 +58,9 @@ class TestListProjects:
                 "region": "us-east-1",
             }
         ]
-        mock_response.headers = {}
 
-        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-            mock_get.return_value = mock_response
+        with patch("httpx.AsyncClient.request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             async with SupabaseManagementClient(access_token="test-token") as client:
                 projects = await client.list_projects()
 
@@ -78,10 +75,9 @@ class TestListProjects:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = []
-        mock_response.headers = {}
 
-        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-            mock_get.return_value = mock_response
+        with patch("httpx.AsyncClient.request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             async with SupabaseManagementClient(access_token="test-token") as client:
                 projects = await client.list_projects()
 
@@ -101,10 +97,9 @@ class TestGetProject:
             "status": "ACTIVE_HEALTHY",
             "region": "us-east-1",
         }
-        mock_response.headers = {}
 
-        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-            mock_get.return_value = mock_response
+        with patch("httpx.AsyncClient.request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             async with SupabaseManagementClient(access_token="test-token") as client:
                 project = await client.get_project("abc123")
 
@@ -115,12 +110,9 @@ class TestGetProject:
     async def test_raises_not_found_for_404(self) -> None:
         mock_response = MagicMock()
         mock_response.status_code = 404
-        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "Not Found", request=MagicMock(), response=mock_response
-        )
 
-        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-            mock_get.return_value = mock_response
+        with patch("httpx.AsyncClient.request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             async with SupabaseManagementClient(access_token="test-token") as client:
                 with pytest.raises(NotFoundError):
                     await client.get_project("nonexistent")
@@ -138,10 +130,9 @@ class TestListOrganizations:
                 "slug": "my-org",
             }
         ]
-        mock_response.headers = {}
 
-        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-            mock_get.return_value = mock_response
+        with patch("httpx.AsyncClient.request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             async with SupabaseManagementClient(access_token="test-token") as client:
                 orgs = await client.list_organizations()
 
@@ -157,12 +148,9 @@ class TestErrorHandling:
     async def test_raises_authentication_error_for_401(self) -> None:
         mock_response = MagicMock()
         mock_response.status_code = 401
-        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "Unauthorized", request=MagicMock(), response=mock_response
-        )
 
-        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-            mock_get.return_value = mock_response
+        with patch("httpx.AsyncClient.request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             async with SupabaseManagementClient(access_token="invalid-token") as client:
                 with pytest.raises(AuthenticationError):
                     await client.list_projects()
@@ -174,23 +162,19 @@ class TestRateLimiting:
         rate_limit_response = MagicMock()
         rate_limit_response.status_code = 429
         rate_limit_response.headers = {"Retry-After": "1"}
-        rate_limit_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "Too Many Requests", request=MagicMock(), response=rate_limit_response
-        )
 
         success_response = MagicMock()
         success_response.status_code = 200
         success_response.json.return_value = []
-        success_response.headers = {}
 
-        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-            mock_get.side_effect = [rate_limit_response, success_response]
+        with patch("httpx.AsyncClient.request", new_callable=AsyncMock) as mock_request:
+            mock_request.side_effect = [rate_limit_response, success_response]
             with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
                 async with SupabaseManagementClient(access_token="test-token") as client:
                     result = await client.list_projects()
 
         assert result == []
-        assert mock_get.call_count == 2
+        assert mock_request.call_count == 2
         mock_sleep.assert_called()
 
     @pytest.mark.asyncio
@@ -198,35 +182,29 @@ class TestRateLimiting:
         rate_limit_response = MagicMock()
         rate_limit_response.status_code = 429
         rate_limit_response.headers = {"Retry-After": "1"}
-        rate_limit_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "Too Many Requests", request=MagicMock(), response=rate_limit_response
-        )
 
-        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-            mock_get.return_value = rate_limit_response
+        with patch("httpx.AsyncClient.request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = rate_limit_response
             with patch("asyncio.sleep", new_callable=AsyncMock):
                 async with SupabaseManagementClient(access_token="test-token") as client:
                     with pytest.raises(RateLimitError):
                         await client.list_projects()
 
-        assert mock_get.call_count >= 3
+        assert mock_request.call_count == 4
 
     @pytest.mark.asyncio
     async def test_exponential_backoff_delays(self) -> None:
         rate_limit_response = MagicMock()
         rate_limit_response.status_code = 429
         rate_limit_response.headers = {}
-        rate_limit_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "Too Many Requests", request=MagicMock(), response=rate_limit_response
-        )
 
         sleep_delays: list[float] = []
 
         async def capture_sleep(delay: float) -> None:
             sleep_delays.append(delay)
 
-        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-            mock_get.return_value = rate_limit_response
+        with patch("httpx.AsyncClient.request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = rate_limit_response
             with patch("asyncio.sleep", side_effect=capture_sleep):
                 async with SupabaseManagementClient(access_token="test-token") as client:
                     with pytest.raises(RateLimitError):
@@ -244,10 +222,9 @@ class TestContextManager:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = []
-        mock_response.headers = {}
 
-        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
-            mock_get.return_value = mock_response
+        with patch("httpx.AsyncClient.request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response
             async with SupabaseManagementClient(access_token="test-token") as client:
                 assert client is not None
                 await client.list_projects()
